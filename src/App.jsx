@@ -118,49 +118,17 @@ function genCotizacion({ colegio,contacto,fecha,talleres,porcentaje,notas }) {
 }
 
 //    Descargar DOCX                                                            
-async function descargarDocx(texto, titulo) {
-  // Load docx library dynamically
-  const script = document.createElement('script');
-  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js';
-  document.head.appendChild(script);
-  await new Promise(r => { script.onload = r; });
-
-  const { Document, Packer, Paragraph, TextRun, AlignmentType } = window.docx;
-
-  const lineas = texto.split("\n");
-  const children = lineas.map(linea => {
-    const esTitulo = linea === linea.toUpperCase() && linea.trim().length > 3 && !linea.startsWith(' ') && !linea.startsWith('-');
-    const esSubtitulo = linea.includes(':') && linea === linea.toUpperCase() && linea.trim().length > 0;
-    return new Paragraph({
-      alignment: AlignmentType.JUSTIFIED,
-      spacing: { after: linea.trim() === '' ? 0 : 120 },
-      children: [new TextRun({
-        text: linea,
-        bold: esTitulo || esSubtitulo,
-        size: esTitulo ? 26 : 24,
-        font: "Arial",
-      })]
-    });
-  });
-
-  const doc = new Document({
-    sections: [{
-      properties: {
-        page: {
-          size: { width: 11906, height: 16838 },
-          margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 }
-        }
-      },
-      children
-    }]
-  });
-
-  const blob = await Packer.toBlob(doc);
+function descargarDocx(texto, titulo) {
+  // Download as plain text file (works everywhere, opens in Word)
+  const blob = new Blob([texto], { type: "text/plain;charset=utf-8" });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const a = document.createElement("a");
   a.href = url;
-  a.download = `${titulo.replace(/[^a-zA-Z0-9\s]/g, '').trim()}.docx`;
+  const nombre = (titulo || "documento").replace(/[^a-zA-Z0-9 ]/g, "").trim();
+  a.download = nombre + ".txt";
+  document.body.appendChild(a);
   a.click();
+  document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 
