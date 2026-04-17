@@ -117,6 +117,54 @@ function genCotizacion({ colegio,contacto,fecha,talleres,porcentaje,notas }) {
   return `COTIZACIÓN DE TALLERES EXTRAPROGRAMÁTICOS\nFORMANDO CAMPEONES SpA\n\nFecha: ${fecha||hoy()}\nPara: ${colegio||"___"} · Atención: ${contacto||"___"}\n\nTALLERES:\n${tab}\n\nCONDICIONES:\n• El Colegio recibe el ${porcentaje||"7,5"}% de ingresos de talleres no deportivos.\n${notas?`\nNOTAS: ${notas}\n`:""}\nValidez: 30 días.\n\n___________________________\nFrancisco de Borja Vicuña · Formando Campeones SpA\n`;
 }
 
+// ── Descargar DOCX ───────────────────────────────────────────────────────────
+async function descargarDocx(texto, titulo) {
+  // Load docx library dynamically
+  const script = document.createElement('script');
+  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js';
+  document.head.appendChild(script);
+  await new Promise(r => { script.onload = r; });
+
+  const { Document, Packer, Paragraph, TextRun, AlignmentType } = window.docx;
+
+  const lineas = texto.split('
+');
+  const children = lineas.map(linea => {
+    const esTitulo = linea === linea.toUpperCase() && linea.trim().length > 3 && !linea.startsWith(' ') && !linea.startsWith('•');
+    const esSubtitulo = /^[A-ZÁÉÍÓÚ\s]+:/.test(linea) && linea.trim().length > 0;
+    return new Paragraph({
+      alignment: AlignmentType.JUSTIFIED,
+      spacing: { after: linea.trim() === '' ? 0 : 120 },
+      children: [new TextRun({
+        text: linea,
+        bold: esTitulo || esSubtitulo,
+        size: esTitulo ? 26 : 24,
+        font: "Arial",
+      })]
+    });
+  });
+
+  const doc = new Document({
+    sections: [{
+      properties: {
+        page: {
+          size: { width: 11906, height: 16838 },
+          margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 }
+        }
+      },
+      children
+    }]
+  });
+
+  const blob = await Packer.toBlob(doc);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${titulo.replace(/[^a-zA-Z0-9\s]/g, '').trim()}.docx`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ── UI primitivos ─────────────────────────────────────────────────────────────
 const Badge = ({ estado }) => {
   const e = ESTADOS.find(s=>s.id===estado)||ESTADOS[0];
@@ -316,7 +364,15 @@ function ModalDocumento({ doc, prospectos, onSave, onClose }) {
       </>}
       {tab==="preview"&&<>
         {!preview&&<div style={{ textAlign:"center", padding:"28px 0", color:B.gray500, fontSize:13, background:B.gray50, borderRadius:12, border:`1.5px dashed ${B.gray300}` }}>Haz clic en "Vista previa" para generar el documento.</div>}
-        {preview&&<pre style={{ background:B.gray50, border:`1px solid ${B.gray300}`, borderRadius:10, padding:16, fontSize:12, lineHeight:1.75, whiteSpace:"pre-wrap", maxHeight:380, overflow:"auto", fontFamily:"'Courier New',monospace", color:B.text }}>{preview}</pre>}
+        {preview&&<>
+          <pre style={{ background:B.gray50, border:`1px solid ${B.gray300}`, borderRadius:10, padding:16, fontSize:12, lineHeight:1.75, whiteSpace:"pre-wrap", maxHeight:320, overflow:"auto", fontFamily:"'Courier New',monospace", color:B.text }}>{preview}</pre>
+          <div style={{ marginTop:12 }}>
+            <Btn onClick={()=>descargarDocx(preview, f.titulo||"Documento")} style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Descargar Word (.docx)
+            </Btn>
+          </div>
+        </>}
       </>}
       <div style={{ display:"flex", gap:10, justifyContent:"flex-end", marginTop:18, paddingTop:16, borderTop:`1px solid ${B.gray100}`, flexWrap:"wrap" }}>
         <Btn variant="secondary" onClick={onClose}>Cancelar</Btn>
@@ -425,8 +481,12 @@ function VistaDocumentos({ docs, prospectos, onNuevo, onEditar, onEliminar }) {
                   <span>📅 {fmt(d.fecha)}</span>
                 </div>
               </div>
-              <div style={{ display:"flex", gap:8, alignItems:"center", flexShrink:0 }}>
+              <div style={{ display:"flex", gap:8, alignItems:"center", flexShrink:0, flexWrap:"wrap", justifyContent:"flex-end" }}>
                 <span style={{ background:c+"18", color:c, border:`1px solid ${c}40`, padding:"3px 11px", borderRadius:20, fontSize:11, fontWeight:700, textTransform:"uppercase" }}>{d.estado}</span>
+                {d._texto&&<Btn variant="outline" style={{ fontSize:11, padding:"6px 11px", display:"flex", alignItems:"center", gap:5 }} onClick={()=>descargarDocx(d._texto, d.titulo)}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  .docx
+                </Btn>}
                 <Btn variant="secondary" style={{ fontSize:11, padding:"6px 11px" }} onClick={()=>onEditar(d)}>Editar</Btn>
                 <Btn variant="danger" style={{ fontSize:11, padding:"6px 11px" }} onClick={()=>onEliminar(d.id)}>✕</Btn>
               </div>
