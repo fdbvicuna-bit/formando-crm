@@ -1,4 +1,3 @@
-import React from "react";
 import { useState, useEffect, useCallback, useRef } from "react";
 
 // ── Brand colors ─────────────────────────────────────────────────────────────
@@ -77,10 +76,10 @@ async function guardarEnDrive(datos, fid) {
 }
 
 async function loadLocal(key) {
-  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch { return null; }
+  try { const r = await window.storage.get(key); return r ? JSON.parse(r.value) : null; } catch { return null; }
 }
 async function saveLocal(key, data) {
-  try { localStorage.setItem(key, JSON.stringify(data)); } catch {}
+  try { await window.storage.set(key, JSON.stringify(data)); } catch {}
 }
 
 // ── Seed data ────────────────────────────────────────────────────────────────
@@ -189,9 +188,9 @@ const ModalConfirm = ({ mensaje, onConfirm, onCancel }) => (
 
 const SyncBadge = ({ estado }) => {
   const cfg = {
-    idle:    { color:"#10B981", bg:"#D1FAE5", icon:"✓", label:"Drive sincronizado" },
+    idle:    { color:"#10B981", bg:"#D1FAE5", icon:"✓", label:"Drive" },
     saving:  { color:B.blue,    bg:B.bluePale, icon:"⟳", label:"Guardando…" },
-    error:   { color:"rgba(255,255,255,0.7)", bg:"rgba(255,255,255,0.15)", icon:"💾", label:"Local" },
+    error:   { color:"rgba(255,255,255,0.7)", bg:"rgba(255,255,255,0.15)", icon:"·", label:"Local" },
     loading: { color:B.blue,    bg:B.bluePale, icon:"⟳", label:"Conectando…" },
   }[estado]||{};
   return <span style={{ background:cfg.bg, color:cfg.color, padding:"5px 13px", borderRadius:20, fontSize:11, fontWeight:700, display:"flex", alignItems:"center", gap:5 }}>
@@ -200,15 +199,34 @@ const SyncBadge = ({ estado }) => {
 };
 
 // ── KPI Card ──────────────────────────────────────────────────────────────────
-const KPICard = ({ label, val, icon, accent }) => (
-  <div style={{ background:B.white, borderRadius:14, padding:"18px 22px", border:`1px solid ${B.gray100}`, boxShadow:`0 2px 12px rgba(3,66,252,0.06)`, display:"flex", alignItems:"center", gap:14 }}>
-    <div style={{ width:46, height:46, borderRadius:12, background:accent+"14", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>{icon}</div>
-    <div>
-      <div style={{ fontSize:26, fontWeight:800, color:accent, fontFamily:"'Nunito',sans-serif", lineHeight:1 }}>{val}</div>
-      <div style={{ fontSize:11, color:B.gray500, fontWeight:600, textTransform:"uppercase", letterSpacing:0.6, marginTop:3 }}>{label}</div>
+const IconSchool = ({color}) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>;
+const IconHandshake = ({color}) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 7.65l.77.77L12 21l7.65-7.65.77-.77a5.4 5.4 0 0 0 0-7.65z"/></svg>;
+const IconTrophy = ({color}) => <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="8 21 12 17 16 21"/><path d="M5 3H3v4c0 2.2 1.8 4 4 4h10c2.2 0 4-1.8 4-4V3h-2"/><rect x="8" y="17" width="8" height="1"/><path d="M5 3h14"/></svg>;
+const IconUser = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
+const IconMail = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg>;
+const IconPhone = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>;
+const IconNote = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>;
+
+const KPI_ICONS = {
+  school: IconSchool,
+  handshake: IconHandshake,
+  trophy: IconTrophy,
+};
+
+const KPICard = ({ label, val, iconKey, accent }) => {
+  const Icon = KPI_ICONS[iconKey];
+  return (
+    <div style={{ background:B.white, borderRadius:14, padding:"18px 22px", border:`1px solid ${B.gray100}`, boxShadow:`0 2px 12px rgba(3,66,252,0.06)`, display:"flex", alignItems:"center", gap:14 }}>
+      <div style={{ width:46, height:46, borderRadius:12, background:accent+"14", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+        {Icon && <Icon color={accent} />}
+      </div>
+      <div>
+        <div style={{ fontSize:26, fontWeight:800, color:accent, fontFamily:"'Nunito',sans-serif", lineHeight:1 }}>{val}</div>
+        <div style={{ fontSize:11, color:B.gray500, fontWeight:600, textTransform:"uppercase", letterSpacing:0.6, marginTop:3 }}>{label}</div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // ── Modales ───────────────────────────────────────────────────────────────────
 function ModalProspecto({ prospecto, onSave, onClose }) {
@@ -319,10 +337,10 @@ function VistaCRM({ prospectos, docs, onNuevo, onEditar, onEliminar, onNuevoDoc 
   return (
     <div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:10, marginBottom:20 }}>
-        <KPICard label="Total prospectos" val={prospectos.length} icon="🏫" accent={B.blue} />
-        <KPICard label="En negociación" val={(conteo.negociacion||0)+(conteo.propuesta||0)} icon="🤝" accent="#F59E0B" />
+        <KPICard label="Total prospectos" val={prospectos.length} iconKey="school" accent={B.blue} />
+        <KPICard label="En negociación" val={(conteo.negociacion||0)+(conteo.propuesta||0)} iconKey="handshake" accent="#F59E0B" />
         <div style={{ gridColumn:"1 / -1" }}>
-          <KPICard label="Clientes activos" val={conteo.cliente||0} icon="🏆" accent="#10B981" />
+          <KPICard label="Clientes activos" val={conteo.cliente||0} iconKey="trophy" accent="#10B981" />
         </div>
       </div>
 
@@ -356,11 +374,11 @@ function VistaCRM({ prospectos, docs, onNuevo, onEditar, onEliminar, onNuevoDoc 
                 </div>
               </div>
               <div style={{ fontSize:12, color:B.gray500, marginBottom:6, display:"flex", flexDirection:"column", gap:3 }}>
-                {p.contacto&&<span>👤 {p.contacto}</span>}
-                {p.email&&<span>✉️ {p.email}</span>}
-                {p.telefono&&<span>📞 {p.telefono}</span>}
+                {p.contacto&&<span style={{display:"flex",alignItems:"center",gap:4}}><IconUser/> {p.contacto}</span>}
+                {p.email&&<span style={{display:"flex",alignItems:"center",gap:4}}><IconMail/> {p.email}</span>}
+                {p.telefono&&<span style={{display:"flex",alignItems:"center",gap:4}}><IconPhone/> {p.telefono}</span>}
               </div>
-              {p.notas&&<div style={{ fontSize:12, color:B.gray500, marginBottom:8 }}>📝 {p.notas.slice(0,90)}{p.notas.length>90?"…":""}</div>}
+              {p.notas&&<div style={{ fontSize:12, color:B.gray500, marginBottom:8, display:"flex", alignItems:"flex-start", gap:4 }}><IconNote/><span>{p.notas.slice(0,90)}{p.notas.length>90?"…":""}</span></div>}
               {docsP.length>0&&<div style={{ marginBottom:10, display:"flex", gap:6, flexWrap:"wrap" }}>
                 {docsP.map(d=><span key={d.id} style={{ background:B.bluePale, color:B.blue, borderRadius:7, padding:"2px 9px", fontSize:11, fontWeight:700 }}>{d.tipo==="contrato"?"📄":"💰"} {d.titulo.slice(0,30)}</span>)}
               </div>}
@@ -490,7 +508,7 @@ export default function App() {
     <div style={{ minHeight:"100vh", background:B.gray50 }} />
   );
 
-  const navItems=[{id:"crm",label:"Prospectos",icon:"🏫",count:prospectos.length},{id:"docs",label:"Documentos",icon:"📄",count:docs.length}];
+  const navItems=[{id:"crm",label:"Prospectos",count:prospectos.length},{id:"docs",label:"Documentos",count:docs.length}];
 
   return (
     <>
@@ -509,7 +527,7 @@ export default function App() {
           <nav style={{ display:"flex", gap:2, padding:"6px 12px 0" }}>
             {navItems.map(n=>(
               <button key={n.id} onClick={()=>setVista(n.id)} style={{ border:"none", background:vista===n.id?"rgba(255,255,255,0.18)":"transparent", color:vista===n.id?B.white:"rgba(255,255,255,0.6)", padding:"10px 14px", fontSize:13, fontWeight:700, cursor:"pointer", borderRadius:"10px 10px 0 0", fontFamily:"inherit", display:"flex", alignItems:"center", gap:6, transition:"all .15s", flex:1, justifyContent:"center" }}>
-                {n.icon} {n.label}
+                {n.label}
                 <span style={{ background:vista===n.id?B.white:"rgba(255,255,255,0.2)", color:vista===n.id?B.blue:"rgba(255,255,255,0.8)", borderRadius:10, padding:"1px 7px", fontSize:11, fontWeight:800 }}>{n.count}</span>
               </button>
             ))}
@@ -517,7 +535,7 @@ export default function App() {
         </div>
 
         {/* Alerta error */}
-        {syncEstado==="error"&&<div style={{ background:"#EEF1FB", borderBottom:`1px solid ${B.gray300}`, padding:"7px 16px", fontSize:12, color:B.gray500 }}>💾 Datos guardados localmente · Conecta Google Drive en Settings para sincronizar</div>}
+        {syncEstado==="error"&&<div style={{ background:"#EEF1FB", borderBottom:`1px solid ${B.gray300}`, padding:"7px 16px", fontSize:12, color:B.gray500 }}>Datos guardados localmente · Conecta Google Drive en Settings para sincronizar</div>}
 
         {/* Contenido */}
         <div style={{ maxWidth:940, margin:"0 auto", padding:"16px 12px" }}>
@@ -527,7 +545,7 @@ export default function App() {
                 {vista==="crm"?"Pipeline de Prospectos":"Contratos y Cotizaciones"}
               </h1>
               <p style={{ color:B.gray500, fontSize:13, marginTop:3 }}>
-                {driveFileId ? `💚 Sincronizado con Google Drive · ${DRIVE_FILENAME}` : "💾 Guardado localmente · activa Drive en Settings"}
+                {driveFileId ? `Sincronizado con Google Drive · ${DRIVE_FILENAME}` : "Guardado localmente · activa Drive en Settings"}
               </p>
             </div>
           </div>
